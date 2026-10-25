@@ -1,0 +1,42 @@
+# Local full-stack deployment: PostgreSQL + the API (serving the built SPA).
+services:
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: ats
+      POSTGRES_PASSWORD: ats
+      POSTGRES_DB: ats
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ats"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      ENVIRONMENT: production
+      SECRET_KEY: change-me-in-production-please-use-a-long-random-string
+      DATABASE_URL: postgresql+psycopg2://ats:ats@db:5432/ats
+      STORAGE_BACKEND: local
+      STORAGE_DIR: /data/storage
+      BACKEND_CORS_ORIGINS: http://localhost:8000
+      PROCESSING_MODE: background
+    ports:
+      - "8000:8000"
+    volumes:
+      - files:/data/storage
+    # Apply migrations, then start the API.
+    command: >
+      sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000"
+
+volumes:
+  pgdata:
+  files:
