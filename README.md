@@ -1,202 +1,272 @@
-TalentLens — AI-Powered ATS & Resume Shortlisting Platform
-A production-oriented applicant-tracking system that parses resumes, matches them against job requirements, and produces an explainable match score recruiters can defend. AI is decision support — the platform never auto-rejects a candidate on a score alone.
+<div align="center">
 
-Built as a real, runnable full-stack app: a FastAPI backend, a SQLAlchemy schema with Alembic migrations, and a React + TypeScript + Tailwind single-page frontend that the API serves in production.
+🔎 TalentLens
+AI-Powered Applicant Tracking & Resume Intelligence
+Turn resumes into explainable hiring insights — while keeping humans in control.
 
-Table of contents
-What it does
-Architecture
-Tech stack
-Quick start (5 minutes)
-Environment variables
-Database setup & migrations
-Demo accounts & data
-The matching engine
-API reference
-Testing
-Deployment
-Security, privacy & fairness
-What is intentionally left unconfigured
-Project layout
-What it does
-Recruiters create jobs, upload job descriptions (with AI-assisted requirement extraction), bulk-upload PDF/DOCX resumes, review explainable match scores, rank/filter/shortlist candidates, move them through a hiring pipeline, and export reports.
-Candidates register, apply to open roles with a resume, track application status, edit their profile and request data deletion.
-Administrators manage users and roles, monitor processing failures and platform configuration, and review audit logs.
-All dashboard and report figures are computed live from the database — nothing is hardcoded. Demo data lives in its own clearly-labelled organization and is never mixed with real records.
+TalentLens is a full-stack applicant-tracking platform that helps recruiters analyze resumes, compare candidates against job requirements, manage hiring pipelines, and generate reports. Candidates can apply for roles and track their applications, while administrators oversee users, organizations, and audit activity.
+<p>
+  <img src="https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white" alt="Python 3.12" />
+  <img src="https://img.shields.io/badge/FastAPI-Backend-009688?logo=fastapi&logoColor=white" alt="FastAPI" />
+  <img src="https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=black" alt="React 18" />
+  <img src="https://img.shields.io/badge/TypeScript-Frontend-3178C6?logo=typescript&logoColor=white" alt="TypeScript" />
+  <img src="https://img.shields.io/badge/License-Add%20your%20license-lightgrey" alt="License placeholder" />
+</p>
 
-Architecture
-┌────────────────────────────┐        ┌─────────────────────────────────────┐
-│  React + TypeScript SPA    │  HTTP  │  FastAPI backend (app/)             │
-│  (Vite + Tailwind)         │ ─────► │                                     │
-│  • marketing pages         │  /api  │  routers/  auth jobs resumes ...    │
-│  • recruiter dashboard     │ ◄───── │  deps.py   authn + RBAC + org scope │
-│  • candidate dashboard     │  JSON  │  services/ parsing · matching · AI  │
-│  • admin console           │        │  models.py SQLAlchemy schema        │
-└────────────────────────────┘        └───────────────┬─────────────────────┘
-                                                      │
-                        ┌─────────────────────────────┼───────────────────────────┐
-                        │                             │                           │
-                 ┌──────▼──────┐            ┌─────────▼─────────┐       ┌─────────▼─────────┐
-                 │  Database   │            │  Private storage  │       │  LLM provider     │
-                 │ SQLite /    │            │ local disk / S3   │       │ OpenAI-compatible │
-                 │ PostgreSQL  │            │ signed URLs only  │       │ (optional)        │
-                 └─────────────┘            └───────────────────┘       └───────────────────┘
-Request flow for screening: recruiter uploads resumes → each file is validated (extension + magic bytes), hashed for duplicate detection, stored privately, and queued → a worker extracts text (PDF/DOCX, optional OCR) and parses it into structured fields → the resume is matched against every job it was applied to → an explainable MatchResult is stored and the candidate's score updated → the recruiter reviews the breakdown and makes the call.
 
-The AI logic is fully separated into reusable services (resume_parser, job_parser, skill_normalization, matching, reports, llm), each usable independently and each degrading gracefully when no AI provider is configured.
+Explainable matching · Role-based access · Candidate self-service · Human-led decisions
+</div>
 
-Tech stack
-Layer	Choice
-Frontend	React 18 + TypeScript, Vite, Tailwind CSS, Recharts, React Router
-Backend	Python 3.12, FastAPI, Pydantic v2, SQLAlchemy 2.0
-Database	SQLite (default, zero-config) — PostgreSQL / Supabase ready
-Migrations	Alembic
-Auth	JWT (python-jose) + bcrypt, server-enforced role-based access
-Parsing	pypdf (PDF), python-docx (DOCX), optional Tesseract OCR
-AI	OpenAI-compatible chat completions, optional, server-side only
-Storage	Private local disk (default) or S3 interface
-Charts	Recharts
-Tests	pytest + FastAPI TestClient
-Quick start (5 minutes)
-1. Backend
+✨ Why TalentLens?
+Hiring teams often need to review many resumes against changing job requirements. TalentLens streamlines that workflow and makes the reasons behind a match score visible.
+- 🎯 Explainable candidate matching — see matched, partially matched, missing, and unverified requirements.
+- 📄 Resume parsing — extract structured information from PDF and DOCX files.
+- 🧠 AI-assisted job analysis — optionally use an OpenAI-compatible LLM to enrich job and resume analysis.
+- 🧑‍💼 Recruiter workspace — rank, filter, shortlist, and move candidates through hiring stages.
+- 👤 Candidate portal — apply for roles, update profile details, and track application status.
+- 📊 Live analytics and exports — view database-driven dashboard metrics and export reports to CSV.
+- 🛡️ Privacy-conscious design — private file storage, organization-scoped access, audit logs, and candidate deletion requests.
+- 🤝 Human-in-the-loop hiring — a score supports a decision; it does not automatically reject a candidate.
+Responsible AI principle: TalentLens is designed to support hiring decisions, not make consequential decisions on a recruiter's behalf. Fairness safeguards reduce risk, but do not guarantee unbiased outcomes.
+
+🧭 Table of Contents
+- Core Features
+- How It Works
+- Architecture
+- Technology Stack
+- Quick Start
+- Environment Configuration
+- Database and Migrations
+- Demo Accounts
+- Matching Methodology
+- API Overview
+- Testing
+- Docker Deployment
+- Security, Privacy & Fairness
+- Configuration Notes
+- Project Structure
+🚀 Core Features
+For Recruiters
+- Create and manage job openings.
+- Upload job descriptions and extract requirements with optional AI assistance.
+- Bulk-upload PDF and DOCX resumes.
+- Review candidate match scores with supporting evidence and uncertainty indicators.
+- Search, sort, filter, rank, and shortlist candidates.
+- Track application stages, notes, interview feedback, and stage history.
+- View analytics dashboards and export CSV reports.
+For Candidates
+- Register and manage a profile.
+- Browse available jobs and submit applications with a resume.
+- Track application status.
+- Request deletion of personal data.
+For Administrators
+- Manage users, roles, and organizations.
+- Review audit logs and system health.
+- Monitor processing and configuration issues.
+🔄 How It Works
+1. Create a job — add a role and define required and preferred qualifications.
+2. Upload resumes — files are validated, hashed for duplicate detection, and stored privately.
+3. Extract information — the processing pipeline extracts text and parses relevant resume fields.
+4. Calculate a match — the engine compares resume evidence with the job requirements.
+5. Review the explanation — recruiters see matched, partial/transferable, missing, or unverified requirements.
+6. Manage the hiring process — update stages, record feedback, and review analytics.
+🏗️ Architecture
+┌──────────────────────────────────┐
+│       React + TypeScript         │
+│       Vite + Tailwind CSS        │
+│ Recruiter · Candidate · Admin UI │
+└─────────────────┬────────────────┘
+                  │ HTTP / JSON
+┌─────────────────▼────────────────┐
+│           FastAPI API            │
+│ Auth · Jobs · Resumes · Reports  │
+│ Candidates · Applications · Admin│
+└───────┬──────────────┬───────────┘
+        │              │
+┌───────▼────────┐ ┌───▼────────────────┐
+│ SQLite /       │ │ Processing Services │
+│ PostgreSQL     │ │ Parsing · Matching  │
+└────────────────┘ │ Optional LLM · OCR  │
+                   └─────────┬──────────┘
+                             │
+                   ┌─────────▼──────────┐
+                   │ Private File Storage│
+                   │ Local disk / S3     │
+                   └────────────────────┘
+The AI-related logic is separated into reusable services for parsing, skill normalization, matching, reports, storage, and LLM integration. The deterministic matching engine works without an external AI provider; optional LLM functionality can enrich selected parts of the analysis.
+🧰 Technology Stack
+Layer	Technologies
+Frontend	React 18, TypeScript, Vite, Tailwind CSS, React Router, Recharts
+Backend	Python 3.12, FastAPI, Pydantic v2
+Database	SQLite by default; PostgreSQL/Supabase-compatible configuration
+ORM & migrations	SQLAlchemy 2.0, Alembic
+Authentication	JWT, python-jose, bcrypt, role-based access control
+Resume parsing	pypdf, python-docx, optional Tesseract OCR
+AI integration	Optional OpenAI-compatible chat completions API
+Storage	Private local storage by default; S3 interface
+Testing	pytest, FastAPI TestClient
+Deployment	Docker, Docker Compose
+
+
+⚡ Quick Start
+Prerequisites
+- Python 3.12
+- Node.js and npm
+- Git
+1. Clone the repository
+git clone <YOUR_REPOSITORY_URL>
+cd ats-platform
+Replace <YOUR_REPOSITORY_URL> with your repository URL.
+2. Set up the backend
 cd backend
-python -m venv .venv && source .venv/bin/activate     # optional
+python -m venv .venv
+Activate the virtual environment:
+# macOS / Linux
+source .venv/bin/activate
+
+# Windows PowerShell
+.venv\Scripts\Activate.ps1
+Install dependencies and configure the environment:
 pip install -r requirements.txt
+cp ../.env.example ../.env
+On Windows, copy .env.example to ..\.env manually if cp is unavailable.
 
-cp ../.env.example ../.env                            # then edit if needed
-export DATABASE_URL="sqlite:///./ats.db"              # or just rely on .env
-
+Start the API:
 uvicorn app.main:app --reload --port 8000
-The API is now at http://localhost:8000 (docs at /docs). On first start it creates the schema and seeds clearly-labelled demo data.
-
-2. Frontend (dev)
+The API runs at http://localhost:8000. Interactive API documentation is available at http://localhost:8000/docs.
+3. Start the frontend in development mode
+Open a second terminal from the repository root:
 cd frontend
 npm install
-npm run dev            # http://localhost:5173, proxies /api to :8000
-3. Or run the built app served by the API (single origin)
-cd frontend && npm install && npm run build            # emits frontend/dist
-cd ../backend && uvicorn app.main:app --port 8000      # serves the SPA too
-# open http://localhost:8000
-Note on constrained environments: if npm run build fails with an out-of-memory error from esbuild, raise the virtual-memory limit first: bash -c 'ulimit -v unlimited; npm run build'.
+npm run dev
+Open http://localhost:5173. The Vite development server proxies API requests to the backend.
+4. Or run the built application from FastAPI
+cd frontend
+npm install
+npm run build
 
-There is a Makefile at the repo root with shortcuts: make install, make dev-api, make dev-web, make build, make test, make migrate.
+cd ../backend
+uvicorn app.main:app --port 8000
+Then open http://localhost:8000.
+Tip: A root-level Makefile includes shortcuts such as make install, make dev-api, make dev-web, make build, make test, and make migrate.
 
-Environment variables
-All configuration is read from the environment (or a .env file). See .env.example for the full annotated list. Key ones:
+⚙️ Environment Configuration
+Configuration can be provided through environment variables or the .env file. See .env.example for the complete list.
+Variable	Default	Purpose
+SECRET_KEY	Development placeholder	Signs JWTs and download tokens; replace before production
+DATABASE_URL	sqlite:///./ats.db	Database connection string
+BACKEND_CORS_ORIGINS	http://localhost:5173	Allowed frontend origins
+STORAGE_BACKEND	local	Select local or s3 storage
+STORAGE_DIR	./storage	Private local upload directory
+MAX_UPLOAD_MB	10	Maximum upload size per file
+LLM_ENABLED	false	Enables optional LLM enrichment
+LLM_API_KEY	Empty	Server-side AI provider key
+LLM_BASE_URL / LLM_MODEL	Provider defaults / gpt-4o-mini	LLM endpoint and model
+OCR_ENABLED	false	Enables OCR when Tesseract is installed
+PROCESSING_MODE	background	inline runs processing synchronously
+RESUME_RETENTION_DAYS	365	Configurable resume retention period
 
-Variable	Default	Notes
-SECRET_KEY	dev placeholder	Change in production. Signs JWTs and download tokens.
-DATABASE_URL	sqlite:///./ats.db	Use postgresql+psycopg2://… for Postgres/Supabase.
-BACKEND_CORS_ORIGINS	http://localhost:5173	Comma-separated allowed origins.
-STORAGE_BACKEND	local	local or s3.
-STORAGE_DIR	./storage	Private directory for uploaded files.
-MAX_UPLOAD_MB	10	Per-file size limit.
-LLM_ENABLED / LLM_API_KEY	false / empty	Enables optional AI enrichment.
-LLM_BASE_URL / LLM_MODEL	OpenAI / gpt-4o-mini	Any OpenAI-compatible endpoint.
-OCR_ENABLED	false	Needs the tesseract binary installed.
-PROCESSING_MODE	background	inline processes synchronously (used by tests).
-RESUME_RETENTION_DAYS	365	Configurable retention window.
-Secrets live only on the server. The frontend never receives an API key and talks exclusively to our own /api.
 
-Database setup & migrations
-SQLite works out of the box. For PostgreSQL/Supabase:
-
+Keep secrets server-side. The frontend communicates with the application's API; it should never receive the LLM API key.
+🗄️ Database and Migrations
+SQLite is the default for local development. To use PostgreSQL or Supabase, configure DATABASE_URL, then apply migrations:
+# Example only — replace credentials and host with your own
 export DATABASE_URL="postgresql+psycopg2://user:pass@host:5432/ats"
+
 cd backend
-alembic upgrade head          # apply the schema
-# alembic revision --autogenerate -m "your change"   # after model edits
-Base.metadata.create_all() also runs on startup for frictionless local dev. For production, prefer migrations and set ENVIRONMENT=production (which also disables demo seeding).
+alembic upgrade head
+For production, use migrations and set ENVIRONMENT=production. Startup schema creation supports local development, while production should use controlled migrations.
 
-The schema (17 tables) covers organizations, users, memberships, jobs, job requirements, candidate profiles, resumes, parsed resume data, applications, match results, stage history, recruiter notes, interview feedback, audit logs, consent records and deletion requests — with foreign keys, indexes, unique constraints and timestamps.
-
-Demo accounts & data
-Seeded automatically in non-production environments (all fictional):
-
+The schema includes entities for organizations, users, memberships, jobs, job requirements, candidate profiles, resumes, parsed resume data, applications, match results, stage history, recruiter notes, interview feedback, audit logs, consent records, and deletion requests.
+🧪 Demo Accounts
+Non-production environments seed fictional demo data for exploration.
 Role	Email	Password
 Recruiter	recruiter@demo.com	demo12345
 Admin	admin@demo.com	admin12345
 Superadmin	superadmin@platform.local	superadmin12345
-Three demo jobs (Senior Backend Engineer, Machine Learning Engineer, Ceramic Process Engineer) and six fictional candidate resumes are parsed and scored on first run. Everything lives in the Demo Corp organization (is_demo = true).
 
-The matching engine
-Each resume is compared to a job across five weighted components. Weights are configurable per job and validated to total 100%:
 
-Component	Default	What it measures
-Required skills	40	Required skills matched against parsed resume skills (transferable credit).
-Experience & responsibilities	25	Semantic overlap of responsibilities + an experience-duration fit check.
-Preferred skills	15	Nice-to-have skills.
-Projects & achievements	10	Relevant project/achievement evidence.
-Qualifications & certifications	10	Education and certifications vs stated requirements.
-For every candidate the engine returns matched, partial/transferable, missing/unverified requirements, supporting evidence lines and parsing uncertainties. A missing field is marked unknown, never treated as a capability gap. Protected attributes (name, photo, gender, age, ethnicity, religion, disability) and age proxies like graduation dates are never read.
+Demo data includes three sample roles — Senior Backend Engineer, Machine Learning Engineer, and Ceramic Process Engineer — plus six fictional candidate resumes.
+Security: These credentials are for local demonstration only. Never use demo credentials or development secrets in a production deployment.
 
-A deterministic engine always runs offline. When an OpenAI-compatible provider is configured, an LLM refines responsibility coverage and flags transferable skills; each result is labelled deterministic or hybrid. If the provider times out, rate-limits or returns invalid JSON, the deterministic result is used and labelled accordingly.
+🎯 Matching Methodology
+The default match score combines five configurable components. The weights are validated to total 100% for each job.
+Component	Default weight	What it evaluates
+Required skills	40%	Required skills identified in the parsed resume, including transferable credit
+Experience & responsibilities	25%	Responsibility overlap and experience-duration fit
+Preferred skills	15%	Additional desirable skills
+Projects & achievements	10%	Evidence from relevant projects and accomplishments
+Qualifications & certifications	10%	Education and certifications against job requirements
 
-API reference
-All routes are under /api. Authenticated routes take a Bearer token; org scoping uses an optional X-Org-Id header (defaults to the caller's first membership).
 
-Auth — POST /auth/register, POST /auth/login, GET /auth/me, POST /auth/change-password
+Each result can include:
+- Matched requirements
+- Partial or transferable matches
+- Missing or unverified requirements
+- Supporting evidence from the resume
+- Parsing uncertainties
+Unknown is not the same as missing. If the resume does not provide enough information to verify a requirement, the engine can mark it as unknown rather than automatically treating it as a capability gap.
 
-Public — GET /public/config, GET /public/stats, GET /public/jobs
+A deterministic engine works offline. If an OpenAI-compatible provider is configured, an optional hybrid mode can refine responsibility coverage and identify transferable skills. If the provider fails or returns invalid output, the deterministic result is used instead.
+🔌 API Overview
+All API routes are under /api. Authenticated endpoints use a Bearer token. Organization scoping can use the X-Org-Id header.
+Area	Example endpoints
+Authentication	POST /auth/register, POST /auth/login, GET /auth/me
+Public	GET /public/config, GET /public/stats, GET /public/jobs
+Jobs	GET /jobs, POST /jobs, POST /jobs/analyze-jd
+Resumes	POST /resumes/upload, GET /resumes, POST /resumes/{id}/reprocess
+Candidates	GET /candidates, GET /candidates/{id}
+Applications	GET /applications, POST /applications/{id}/stage
+Analytics	GET /analytics/dashboard, GET /analytics/reports, GET /analytics/export.csv
+Administration	GET /admin/users, GET /admin/audit-logs, GET /admin/system-health
+Candidate self-service	GET /me/applications, POST /me/apply, POST /me/delete-request
 
-Jobs — GET|POST /jobs, GET|PATCH|DELETE /jobs/{id}, POST /jobs/analyze-jd, GET|POST /jobs/{id}/requirements, GET /jobs/{id}/candidates (filter/sort/paginate), POST /jobs/{id}/bulk
 
-Resumes — POST /resumes/upload (multi-file), GET /resumes, GET /resumes/{id}, PATCH /resumes/{id}/parsed, POST /resumes/{id}/reprocess, GET /resumes/{id}/download-url, GET /resumes/file/{token}, DELETE /resumes/{id}
-
-Candidates — GET /candidates, GET /candidates/{id}, PATCH /candidates/{id}, POST /candidates/applications/{id}/rematch, GET /candidates/applications/{id}/parsed
-
-Applications & pipeline — GET /applications, GET /applications/{id}, POST /applications/{id}/stage, GET /applications/{id}/timeline, GET|POST /applications/{id}/notes, GET|POST /applications/{id}/feedback, GET /applications/pipeline/{job_id}
-
-Analytics — GET /analytics/dashboard, GET /analytics/reports, GET /analytics/export.csv
-
-Admin — GET /admin/organizations, GET /admin/users, PATCH /admin/users/{id}, GET /admin/audit-logs, GET /admin/system-health
-
-Candidate self-service — GET|PATCH /me/profile, GET /me/applications, POST /me/apply, POST /me/delete-request
-
-Interactive docs are available at /docs when the server is running.
-
-Testing
+This is a high-level route overview, not an exhaustive endpoint list. Explore the complete interactive API documentation at /docs while the backend is running.
+✅ Testing
+Run the backend test suite:
 cd backend
-python -m pytest            # 56 tests
-Coverage includes: authentication and password handling; role permissions and cross-organization isolation; resume upload, text extraction and parsing; score calculations and weight validation; ranking and filtering; pipeline stage changes and history; private file access and signed URLs; and edge cases (empty/oversized/masquerading files, duplicates, scanned PDFs, malformed DOCX, prompt-injection text, and AI-provider failure fallback).
+python -m pytest
+The project README reports 56 tests covering authentication, permissions, organization isolation, resume parsing, match-score calculations, ranking and filtering, application-stage history, private file access, file validation, duplicate detection, malformed documents, prompt-injection text, and AI-provider failure fallback.
 
-Tests run against an isolated temporary SQLite database with synchronous processing and demo seeding disabled.
+Tests use an isolated temporary SQLite database with synchronous processing and demo seeding disabled.
+🐳 Docker Deployment
+The repository includes a Dockerfile and docker-compose.yml for the application and PostgreSQL.
+docker compose up --build
+Then visit http://localhost:8000.
+Production checklist
+- [ ] Set a strong SECRET_KEY and ENVIRONMENT=production.
+- [ ] Configure managed PostgreSQL/Supabase and apply Alembic migrations.
+- [ ] Configure private S3 storage or a private persistent volume.
+- [ ] Terminate HTTPS at a reverse proxy.
+- [ ] Use a shared rate-limit store, such as Redis, when running multiple replicas.
+- [ ] Replace the in-process worker with Celery/RQ for larger bulk-processing workloads.
+- [ ] Review retention, access, logging, and deletion policies for your deployment.
+🔐 Security, Privacy & Fairness
+TalentLens includes several safeguards intended to reduce common risks:
+- JWT authentication and bcrypt password hashing.
+- Server-side permission checks and organization-scoped database queries.
+- File extension and magic-byte validation, upload size limits, and SHA-256 duplicate detection.
+- Private file storage with short-lived signed download URLs.
+- Authentication rate limiting, input validation, and safe error handling.
+- Audit logging for logins, uploads, stage changes, and administrative actions.
+- Configurable resume retention and candidate deletion requests.
+- Exclusion of protected attributes from scoring, with optional blind screening.
+- No use of graduation dates to infer age and no personality or culture-fit inference.
+- Uploaded documents are treated as untrusted input; embedded instructions are ignored and flagged.
+These measures do not guarantee fairness or eliminate bias. Recruiters should review the evidence, consider context, and retain human oversight for all consequential hiring decisions.
+🧩 Optional Integrations & Current Limitations
+The application can run end-to-end without every external integration configured.
+Area	Default state / requirement
+LLM provider	Disabled by default; configure LLM_ENABLED=true and LLM_API_KEY to enable
+OCR	Disabled by default; requires the Tesseract binary
+Cloud storage	S3 interface requires AWS credentials; private local storage is the default
+PostgreSQL	SQLite is the default; configure DATABASE_URL and run migrations
+Billing	Pricing-page plans are sample content; no payment processor is connected
+Contact form	Client-side validation only; submissions are not persisted
 
-Deployment
-A Dockerfile and docker-compose.yml (app + PostgreSQL) are included:
 
-docker compose up --build       # API + Postgres
-# then visit http://localhost:8000
-Production checklist:
-
-Set a strong SECRET_KEY and ENVIRONMENT=production.
-Point DATABASE_URL at managed PostgreSQL/Supabase and run alembic upgrade head.
-Set STORAGE_BACKEND=s3 with private bucket credentials (or mount a private volume).
-Terminate TLS at a reverse proxy; the app already sends security headers.
-Move rate limiting to a shared store (e.g. Redis) if running multiple replicas.
-Replace the in-process worker with Celery/RQ for large bulk uploads.
-Security, privacy & fairness
-JWT auth with bcrypt password hashing; identical error messages avoid account enumeration.
-Server-side permission checks on every route; every query is scoped to the caller's organization.
-File type + magic-byte validation, size limits, SHA-256 duplicate detection.
-Private storage with short-lived signed URLs; originals are never public.
-Rate limiting on auth endpoints, input validation, and safe error handling that never leaks internals.
-Audit logging of logins, uploads, stage changes and admin actions.
-Resume retention is configurable; candidates can request deletion.
-Protected attributes are excluded from scoring; optional blind screening; graduation dates are never used to infer age; no personality/culture-fit inference.
-Uploaded documents are treated as untrusted data — embedded instructions are ignored (and flagged).
-Fairness note: these practices reduce risk but do not guarantee unbiased outcomes. Score explanations are decision support, not proof of fairness. Always keep a human in the loop for consequential decisions.
-
-What is intentionally left unconfigured
-The platform runs fully end-to-end today. The following are integration points that require credentials or infrastructure you may not have here:
-
-Area	Status
-LLM provider	Off by default. Set LLM_ENABLED=true + LLM_API_KEY. Deterministic engine runs otherwise.
-OCR	Off. Needs the tesseract binary; scanned PDFs otherwise report a clear "no text layer" error.
-Cloud storage	S3 code path is present but needs AWS_* credentials; local private disk is the default.
-PostgreSQL	SQLite by default; set DATABASE_URL and run migrations to use Postgres/Supabase.
-Billing	Pricing page plans are clearly-marked samples; no payment processor is wired.
-Contact form	Validates client-side only; not persisted.
-Project layout
+📁 Project Structure
 ats-platform/
 ├── .env.example
 ├── README.md
@@ -206,30 +276,33 @@ ats-platform/
 ├── backend/
 │   ├── requirements.txt
 │   ├── alembic.ini
-│   ├── alembic/            # migrations (env.py, versions/)
-│   ├── pytest.ini
+│   ├── alembic/
 │   ├── app/
-│   │   ├── main.py         # FastAPI app, CORS, rate limit, static SPA
-│   │   ├── config.py       # settings from env
-│   │   ├── database.py     # engine + session
-│   │   ├── models.py       # SQLAlchemy schema (17 tables)
-│   │   ├── schemas.py      # Pydantic request/response models
-│   │   ├── security.py     # bcrypt + JWT + signed tokens
-│   │   ├── deps.py         # authn, RBAC, org scoping
-│   │   ├── seed.py         # labelled demo data
-│   │   ├── routers/        # auth, jobs, resumes, candidates, applications,
-│   │   │                   # analytics, admin, public, candidate_self
-│   │   └── services/       # llm, skill_normalization, text_extract,
-│   │                       # resume_parser, job_parser, matching, processing,
-│   │                       # reports, storage, audit
-│   └── tests/              # 56 tests across 9 modules
+│   │   ├── main.py
+│   │   ├── config.py
+│   │   ├── database.py
+│   │   ├── models.py
+│   │   ├── schemas.py
+│   │   ├── security.py
+│   │   ├── deps.py
+│   │   ├── seed.py
+│   │   ├── routers/
+│   │   └── services/
+│   └── tests/
 └── frontend/
     ├── package.json
     ├── vite.config.ts
     ├── tailwind.config.js
     └── src/
-        ├── App.tsx         # routes
-        ├── lib/            # api client, auth context
-        ├── components/     # layout, UI kit, tables, uploaders
-        └── pages/          # marketing, auth, recruiter, candidate, admin
-TalentLens is a demonstration build. Sample plans and seeded data are fictional; review the legal templates with counsel before any production use.
+        ├── App.tsx
+        ├── lib/
+        ├── components/
+        └── pages/
+🌱 Future Improvements
+Potential next steps include a dedicated background task queue for high-volume processing, expanded deployment automation, and additional monitoring for production workloads.
+<div align="center">
+
+TalentLens — clearer hiring insights, with people in control.
+
+Built with React, TypeScript, FastAPI, and Python.
+</div>
